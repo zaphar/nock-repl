@@ -1,0 +1,8 @@
+[package]
+name = "nock"
+version = "0.1.0"
+authors = ["Jeremy Wall <jeremy@marzhillstudios.com>"]
+
+[dependencies]
+clap = "~2.19.0"
+rustyline = "1.0.*"
