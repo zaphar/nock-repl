@@ -1,6 +1,8 @@
 extern crate clap;
 extern crate rustyline;
 
+mod tokenizer;
+
 use clap::{App,Arg};
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
@@ -63,6 +65,11 @@ fn is_complete_expr(lines: &Vec<String>) -> bool {
     }
     }
     return count == 0;
+}
+
+enum Noun {
+    Atom(u64),
+    Cell(Box<Noun>, Box<Noun>)
 }
 
 fn main() {
