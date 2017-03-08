@@ -130,7 +130,15 @@ impl Tokenizer {
             if c.is_whitespace() {
                 return Ok(tok);
             }
-            if !c.is_digit(10) && c != '.' {
+            if c == '.' {
+                // treat . as whitespace inside of an atom.
+                // Currently this is pretty dumb and doesn't
+                // enforce the right syntax of dotting as comma.
+                // i.e. every 3 digits. This is deemed acceptable
+                // for now.
+                continue;
+            }
+            if !c.is_digit(10) {
                 // Technically this case is an error but we don't emit
                 // error tokens here, ever, despite what the type signature
                 // states.
@@ -254,6 +262,21 @@ mod tokenizer_tests {
     fn test_tokenizer_simple_multi_char_atoms() {
         let reader = MockReader::new(vec![
                 "1234567890".to_string(),
+                "123  1".to_string(),
+            ]);
+        let boxed = Box::new(reader);
+        let mut toker = Tokenizer::new(boxed);
+        let expect = vec![("1234567890", 0, 0),
+                          ("123", 1, 0),
+                          ("1", 1, 5),
+        ];
+        assert_token_stream(&mut toker, expect);
+    }
+
+    #[test]
+    fn test_tokenizer_simple_multi_char_atoms_with_dot() {
+        let reader = MockReader::new(vec![
+                "123.4567.890".to_string(),
                 "123  1".to_string(),
             ]);
         let boxed = Box::new(reader);
