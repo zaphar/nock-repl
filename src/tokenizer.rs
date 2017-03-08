@@ -14,7 +14,7 @@ struct Token {
 
 impl Token {
     pub fn new(c: char, line: usize, col: usize) -> Self {
-        Token{
+        Token {
             line: line,
             col: col,
             val: c.to_string(),
@@ -35,14 +35,14 @@ pub struct TokenizerError {
 
 impl TokenizerError {
     pub fn new<S: Into<String>>(msg: S) -> Self {
-        TokenizerError{
+        TokenizerError {
             msg: msg.into(),
             cause: None,
         }
     }
 
     pub fn from_io_error<S: Into<String>>(msg: S, err: Error) -> Self {
-        TokenizerError{
+        TokenizerError {
             msg: msg.into(),
             cause: Some(err),
         }
@@ -97,7 +97,7 @@ impl Tokenizer {
                 self.line += 1;
                 self.col = 0;
                 // We synthesize a newline character to simplify parsing.
-                return Ok(('\n', line, col))
+                return Ok(('\n', line, col));
             }
             if self.line >= lines.len() {
                 return Err(TokenizerError::new("End of stream"));
@@ -108,9 +108,9 @@ impl Tokenizer {
             // safe cast to do.
             let curr_col = self.col;
             self.col += 1;
-            return Ok((bytes[curr_col] as char, self.line, curr_col))
+            return Ok((bytes[curr_col] as char, self.line, curr_col));
         }
-        return Err(TokenizerError::new("Empty Expression!"))
+        return Err(TokenizerError::new("Empty Expression!"));
     }
 
     fn pushback(&mut self, len: usize) {
@@ -121,7 +121,8 @@ impl Tokenizer {
     }
 
     fn gobble_atom(&mut self, mut tok: Token) -> Result<Token, TokenizerError> {
-        loop { // char loop
+        loop {
+            // char loop
             let (c, _, _) = match self.get_next_char() {
                 Ok(tpl) => tpl,
                 Err(_) => return Ok(tok),
@@ -133,7 +134,6 @@ impl Tokenizer {
                 // Technically this case is an error but we don't emit
                 // error tokens here, ever, despite what the type signature
                 // states.
-                println!("pusing char back: '{}'", c.escape_default().collect::<String>());
                 self.pushback(1);
                 return Ok(tok);
             }
@@ -144,27 +144,28 @@ impl Tokenizer {
 
     fn get_next_token(&mut self) -> Result<Token, TokenizerError> {
         let maybe_tok: Option<Token> = None;
-        loop { // char loop
+        loop {
+            // char loop
             let (c, line, col) = try!(self.get_next_char());
             match c {
                 // open cell
                 '[' => {
                     return Ok(Token::new(c, line, col));
-                },
+                }
                 // close cell
                 ']' => {
                     return Ok(Token::new(c, line, col));
-                },
+                }
                 // Atom chars
                 '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '.' => {
                     return self.gobble_atom(Token::new(c, line, col));
-                },
+                }
                 // Whitespace
                 ' ' | '\t' | '\n' | '\r' => {
                     // We skip these.
                     println!("Skipping whitespace char");
                     continue;
-                },
+                }
                 _ => return Err(TokenizerError::new(format!("Invalid Character: '{}'", c))),
             }
         }
@@ -174,7 +175,7 @@ impl Tokenizer {
 #[cfg(test)]
 mod tokenizer_tests {
     use std::io::{Error, ErrorKind};
-    use tokenizer::{ExpressionReader,Tokenizer,TokenizerError};
+    use tokenizer::{ExpressionReader, Tokenizer, TokenizerError};
 
     struct MockReader {
         expr: Vec<String>,
@@ -183,7 +184,10 @@ mod tokenizer_tests {
 
     impl MockReader {
         pub fn new(expr: Vec<String>) -> Self {
-            MockReader{expr: expr, err: false}
+            MockReader {
+                expr: expr,
+                err: false,
+            }
         }
     }
 
@@ -191,7 +195,7 @@ mod tokenizer_tests {
         fn read(&mut self) -> Result<Vec<String>, Error> {
             if !self.err {
                 self.err = true;
-                return Ok(self.expr.clone())
+                return Ok(self.expr.clone());
             } else {
                 return Err(Error::new(ErrorKind::Other, "End Of Stream"));
             }
@@ -200,11 +204,9 @@ mod tokenizer_tests {
 
     #[test]
     fn mock_reader_sanity_check() {
-        let mut reader = MockReader::new(
-            vec![
+        let mut reader = MockReader::new(vec![
                 "[1 2 3]".to_string(),
-            ]
-        );
+            ]);
         let expr = reader.read();
         assert!(expr.is_ok());
         let expr = reader.read();
@@ -227,47 +229,33 @@ mod tokenizer_tests {
 
     #[test]
     fn test_tokenizer_simple_one_liner() {
-        let reader = MockReader::new(
-            vec![
+        let reader = MockReader::new(vec![
                 "[1 2 3]".to_string(),
-            ]
-        );
+            ]);
         let boxed = Box::new(reader);
         let mut toker = Tokenizer::new(boxed);
-        let expect = vec![("[", 0, 0),
-                          ("1", 0, 1),
-                          ("2", 0, 3),
-                          ("3", 0, 5),
-                          ("]", 0, 6)];
+        let expect = vec![("[", 0, 0), ("1", 0, 1), ("2", 0, 3), ("3", 0, 5), ("]", 0, 6)];
         assert_token_stream(&mut toker, expect);
     }
 
     #[test]
     fn test_tokenizer_simple_multi_line() {
-        let reader = MockReader::new(
-            vec![
+        let reader = MockReader::new(vec![
                 "[1 2 3".to_string(),
                 "]".to_string(),
-            ]
-        );
+            ]);
         let boxed = Box::new(reader);
         let mut toker = Tokenizer::new(boxed);
-        let expect = vec![("[", 0, 0),
-                          ("1", 0, 1),
-                          ("2", 0, 3),
-                          ("3", 0, 5),
-                          ("]", 1, 0)];
+        let expect = vec![("[", 0, 0), ("1", 0, 1), ("2", 0, 3), ("3", 0, 5), ("]", 1, 0)];
         assert_token_stream(&mut toker, expect);
     }
 
     #[test]
     fn test_tokenizer_simple_multi_char_atoms() {
-        let reader = MockReader::new(
-            vec![
+        let reader = MockReader::new(vec![
                 "1234567890".to_string(),
                 "123  1".to_string(),
-            ]
-        );
+            ]);
         let boxed = Box::new(reader);
         let mut toker = Tokenizer::new(boxed);
         let expect = vec![("1234567890", 0, 0),
