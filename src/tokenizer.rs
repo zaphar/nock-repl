@@ -1,8 +1,11 @@
 //! The tokenizer module implements a nock tokenizer.
 
 use std::io::{Error, ErrorKind};
-use std::convert::From;
+use std::error;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::convert::Into;
+use std::convert::From;
 use std::char;
 
 #[derive(Debug)]
@@ -29,7 +32,7 @@ impl Token {
 #[derive(Debug)]
 pub struct TokenizerError {
     msg: String,
-    cause: Option<Error>,
+    cause: Option<Box<error::Error>>,
 }
 
 
@@ -44,8 +47,31 @@ impl TokenizerError {
     pub fn from_io_error<S: Into<String>>(msg: S, err: Error) -> Self {
         TokenizerError {
             msg: msg.into(),
-            cause: Some(err),
+            cause: Some(Box::new(err)),
         }
+    }
+}
+
+impl Display for TokenizerError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        try!(write!(f, "ParseError: {}\n", self.msg));
+        if let Some(ref cause) = self.cause {
+            try!(write!(f, "Cause:\n\t{}", cause));
+        }
+        return Ok(());
+    }
+}
+
+impl error::Error for TokenizerError {
+    fn description(&self) -> &str {
+        &self.msg
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        if let Some(ref cause) = self.cause {
+            return Some(cause.as_ref());
+        }
+        return None;
     }
 }
 
