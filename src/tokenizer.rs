@@ -1,6 +1,6 @@
 //! The tokenizer module implements a nock tokenizer.
 
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -9,10 +9,10 @@ use std::convert::From;
 use std::char;
 
 #[derive(Debug)]
-struct Token {
-    line: usize,
-    col: usize,
-    val: String,
+pub struct Token {
+    pub line: usize,
+    pub col: usize,
+    pub val: String,
 }
 
 impl Token {
@@ -26,6 +26,18 @@ impl Token {
 
     pub fn append_char(&mut self, c: char) {
         self.val.push(c);
+    }
+
+    pub fn is_atom(&self) -> bool {
+        self.val.len() > 0 && (self.val.as_bytes()[0] as char).is_digit(10)
+    }
+
+    pub fn is_cell_start(&self) -> bool {
+        self.val.len() > 0 && self.val == "["
+    }
+
+    pub fn is_cell_end(&self) -> bool {
+        self.val.len() > 0 && self.val == "]"
     }
 }
 
@@ -84,6 +96,7 @@ impl From<Error> for TokenizerError {
 // TODO(jwall): Tokenizer error.
 pub trait ExpressionReader {
     fn read(&mut self) -> Result<Vec<String>, Error>;
+    // FIXME(jwall): Should this support closing?
 }
 
 pub struct Tokenizer {
@@ -101,11 +114,6 @@ impl Tokenizer {
             col: 0,
             reader: reader,
         }
-    }
-
-    pub fn reset_line_col(&mut self) {
-        self.line = 0;
-        self.col = 0;
     }
 
     pub fn next(&mut self) -> Result<Token, TokenizerError> {
@@ -173,11 +181,9 @@ impl Tokenizer {
             }
             tok.append_char(c);
         }
-        return Ok(tok);
     }
 
     fn get_next_token(&mut self) -> Result<Token, TokenizerError> {
-        let maybe_tok: Option<Token> = None;
         loop {
             // char loop
             let (c, line, col) = try!(self.get_next_char());
@@ -207,11 +213,11 @@ impl Tokenizer {
 }
 
 #[cfg(test)]
-mod tokenizer_tests {
+pub mod tokenizer_tests {
     use std::io::{Error, ErrorKind};
-    use tokenizer::{ExpressionReader, Tokenizer, TokenizerError};
+    use tokenizer::{ExpressionReader, Tokenizer};
 
-    struct MockReader {
+    pub struct MockReader {
         expr: Vec<String>,
         err: bool,
     }
@@ -248,7 +254,6 @@ mod tokenizer_tests {
     }
 
     fn assert_token_stream(toker: &mut Tokenizer, expect: Vec<(&str, usize, usize)>) {
-        let mut i = 0;
         for (v, l, c) in expect {
             let tok = toker.next();
             println!("tok: {:?}", tok);
@@ -257,7 +262,6 @@ mod tokenizer_tests {
             assert_eq!(tok.line, l);
             assert_eq!(tok.col, c);
             assert_eq!(tok.val, *v);
-            i += 1;
         }
     }
 
