@@ -3,10 +3,12 @@ extern crate rustyline;
 
 mod tokenizer;
 mod parser;
+mod errors;
 
 use clap::{App, Arg};
 use rustyline::Editor;
-use rustyline::error::ReadlineError;
+
+use errors::WrappedError;
 
 struct PromptingLineParser {
     read_prompt: String,
@@ -27,8 +29,10 @@ impl PromptingLineParser {
             editor: Editor::<()>::new(),
         }
     }
+}
 
-    fn read(&mut self) -> Result<Vec<String>, ReadlineError> {
+impl tokenizer::ExpressionReader for PromptingLineParser {
+    fn read(&mut self) -> Result<Vec<String>, WrappedError> {
         let mut buffer = Vec::new();
         let mut prompt = &self.read_prompt;
         loop {
@@ -83,10 +87,11 @@ fn main() {
         println!("Welcome to the nock repl!");
         println!("Type nock expressions at the prompt.");
         println!("Ctrl-D to quit...\n");
-        let mut reader =
+        let reader =
             PromptingLineParser::new("nock> ".to_string(), ">     ".to_string(), is_complete_expr);
-        while let Ok(lines) = reader.read() {
-            println!("Echo: {}", lines.join("\n"))
+        let mut nock_parser = parser::Parser::new(Box::new(reader));
+        while let Ok(expr) = nock_parser.parse() {
+            println!("Echo: {}", expr)
         }
     }
 }

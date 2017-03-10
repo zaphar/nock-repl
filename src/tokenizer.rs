@@ -1,12 +1,13 @@
 //! The tokenizer module implements a nock tokenizer.
 
-use std::io::Error;
 use std::error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::convert::Into;
 use std::convert::From;
 use std::char;
+
+use errors::WrappedError;
 
 #[derive(Debug)]
 pub struct Token {
@@ -56,10 +57,10 @@ impl TokenizerError {
         }
     }
 
-    pub fn from_io_error<S: Into<String>>(msg: S, err: Error) -> Self {
+    pub fn with_cause<S: Into<String>, E: error::Error + 'static>(msg: S, err: Box<E>) -> Self {
         TokenizerError {
             msg: msg.into(),
-            cause: Some(Box::new(err)),
+            cause: Some(err),
         }
     }
 }
@@ -87,15 +88,15 @@ impl error::Error for TokenizerError {
     }
 }
 
-impl From<Error> for TokenizerError {
-    fn from(err: Error) -> Self {
-        Self::from_io_error("IO Error", err)
+impl From<WrappedError> for TokenizerError {
+    fn from(err: WrappedError) -> Self {
+        Self::with_cause("Read Error", Box::new(err))
     }
 }
 
 // TODO(jwall): Tokenizer error.
 pub trait ExpressionReader {
-    fn read(&mut self) -> Result<Vec<String>, Error>;
+    fn read(&mut self) -> Result<Vec<String>, WrappedError>;
     // FIXME(jwall): Should this support closing?
 }
 
@@ -214,8 +215,8 @@ impl Tokenizer {
 
 #[cfg(test)]
 pub mod tokenizer_tests {
-    use std::io::{Error, ErrorKind};
     use tokenizer::{ExpressionReader, Tokenizer};
+    use errors::WrappedError;
 
     pub struct MockReader {
         expr: Vec<String>,
@@ -232,12 +233,12 @@ pub mod tokenizer_tests {
     }
 
     impl ExpressionReader for MockReader {
-        fn read(&mut self) -> Result<Vec<String>, Error> {
+        fn read(&mut self) -> Result<Vec<String>, WrappedError> {
             if !self.err {
                 self.err = true;
                 return Ok(self.expr.clone());
             } else {
-                return Err(Error::new(ErrorKind::Other, "End Of Stream"));
+                return Err(WrappedError::new("End Of Stream"));
             }
         }
     }
