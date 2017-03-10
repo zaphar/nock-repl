@@ -13,6 +13,22 @@ pub enum Noun {
     Cell(Box<Noun>, Vec<Noun>),
 }
 
+impl Display for Noun {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        match self {
+            &Noun::Atom(ref u) => try!(write!(fmt, "{}", u)),
+            &Noun::Cell(ref head, ref tail) => {
+                try!(write!(fmt, "[{}", head));
+                for n in tail {
+                    try!(write!(fmt, " {}", n));
+                }
+                try!(write!(fmt, "]"))
+            },
+        }
+        return Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct ParseError {
     msg: String,
