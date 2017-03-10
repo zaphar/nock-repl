@@ -23,9 +23,9 @@ impl Display for Noun {
                     try!(write!(fmt, " {}", n));
                 }
                 try!(write!(fmt, "]"))
-            },
+            }
         }
-        return Ok(())
+        return Ok(());
     }
 }
 

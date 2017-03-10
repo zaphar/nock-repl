@@ -118,24 +118,37 @@ impl Tokenizer {
     }
 
     pub fn next(&mut self) -> Result<Token, TokenizerError> {
-        if !self.curr.is_some() {
-            let expr = try!(self.reader.read());
-            self.curr = Some(expr);
-        }
+        try!(self.consume_reader());
         self.get_next_token()
     }
 
-    fn get_next_char(&mut self) -> Result<(char, usize, usize), TokenizerError> {
+    fn consume_reader(&mut self) -> Result<(), TokenizerError> {
+        let mut consume = false;
         if let Some(ref lines) = self.curr {
+            if self.line >= lines.len() {
+                consume = true;
+            }
+        } else {
+            consume = true;
+        }
+        if consume {
+            self.line = 0;
+            self.col = 0;
+            self.curr = Some(try!(self.reader.read()));
+        }
+        Ok(())
+    }
+
+    fn get_next_char(&mut self) -> Result<(char, usize, usize), TokenizerError> {
+        try!(self.consume_reader());
+        if let Some(ref lines) = self.curr {
+            // Handle our end of line.
             if self.col >= lines[self.line].len() {
                 let (line, col) = (self.line, self.col);
                 self.line += 1;
                 self.col = 0;
                 // We synthesize a newline character to simplify parsing.
                 return Ok(('\n', line, col));
-            }
-            if self.line >= lines.len() {
-                return Err(TokenizerError::new("End of stream"));
             }
             // TODO(jwall): Should we cache this?
             let bytes = &lines[self.line].as_bytes();
@@ -145,7 +158,7 @@ impl Tokenizer {
             self.col += 1;
             return Ok((bytes[curr_col] as char, self.line, curr_col));
         }
-        return Err(TokenizerError::new("Empty Expression!"));
+        return Err(TokenizerError::new("End of stream"));
     }
 
     fn pushback(&mut self, len: usize) {
@@ -204,7 +217,6 @@ impl Tokenizer {
                 // Whitespace
                 ' ' | '\t' | '\n' | '\r' => {
                     // We skip these.
-                    println!("Skipping whitespace char");
                     continue;
                 }
                 _ => return Err(TokenizerError::new(format!("Invalid Character: '{}'", c))),
@@ -264,6 +276,7 @@ pub mod tokenizer_tests {
             assert_eq!(tok.col, c);
             assert_eq!(tok.val, *v);
         }
+        assert!(toker.next().is_err());
     }
 
     #[test]
