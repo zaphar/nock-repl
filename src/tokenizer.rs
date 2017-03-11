@@ -7,6 +7,7 @@ use std::convert::Into;
 use std::convert::From;
 use std::char;
 
+use macros;
 use errors::WrappedError;
 
 #[derive(Debug)]
@@ -42,55 +43,11 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
-pub struct TokenizerError {
-    msg: String,
-    cause: Option<Box<error::Error>>,
-}
-
-
-impl TokenizerError {
-    pub fn new<S: Into<String>>(msg: S) -> Self {
-        TokenizerError {
-            msg: msg.into(),
-            cause: None,
-        }
-    }
-
-    pub fn with_cause<S: Into<String>, E: error::Error + 'static>(msg: S, err: Box<E>) -> Self {
-        TokenizerError {
-            msg: msg.into(),
-            cause: Some(err),
-        }
-    }
-}
-
-impl Display for TokenizerError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        try!(write!(f, "ParseError: {}\n", self.msg));
-        if let Some(ref cause) = self.cause {
-            try!(write!(f, "Cause:\n\t{}", cause));
-        }
-        return Ok(());
-    }
-}
-
-impl error::Error for TokenizerError {
-    fn description(&self) -> &str {
-        &self.msg
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        if let Some(ref cause) = self.cause {
-            return Some(cause.as_ref());
-        }
-        return None;
-    }
-}
+make_error!(TokenizerError, "TokenizerError: {}\n");
 
 impl From<WrappedError> for TokenizerError {
     fn from(err: WrappedError) -> Self {
-        Self::with_cause("Read Error", Box::new(err))
+        Self::new_with_cause("Read Error", Box::new(err))
     }
 }
 

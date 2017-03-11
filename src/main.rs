@@ -1,6 +1,9 @@
 extern crate clap;
 extern crate rustyline;
 
+#[macro_use]
+mod macros;
+
 mod tokenizer;
 mod parser;
 mod errors;

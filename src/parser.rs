@@ -1,10 +1,11 @@
 //! The parser module implements a nock syntax parser.
 
+use std::error;
 use std::str::FromStr;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::error::Error;
 
+use macros;
 use tokenizer::{Tokenizer, Token, TokenizerError, ExpressionReader};
 
 #[derive(Debug,PartialEq)]
@@ -29,52 +30,9 @@ impl Display for Noun {
     }
 }
 
-#[derive(Debug)]
-pub struct ParseError {
-    msg: String,
-    cause: Option<Box<Error>>,
-}
+make_error!(ParseError, "ParseError: {}\n");
 
-
-impl ParseError {
-    pub fn new<S: Into<String>>(msg: S) -> Self {
-        ParseError {
-            msg: msg.into(),
-            cause: None,
-        }
-    }
-
-    pub fn new_with_cause<S: Into<String>>(msg: S, err: Box<Error>) -> Self {
-        ParseError {
-            msg: msg.into(),
-            cause: Some(err),
-        }
-    }
-}
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        try!(write!(f, "ParseError: {}\n", self.msg));
-        if let Some(ref cause) = self.cause {
-            try!(write!(f, "Cause:\n\t{}", cause));
-        }
-        return Ok(());
-    }
-}
-
-impl Error for ParseError {
-    fn description(&self) -> &str {
-        &self.msg
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        if let Some(ref cause) = self.cause {
-            return Some(cause.as_ref());
-        }
-        return None;
-    }
-}
-
+// TODO(jeremy): Should this be created by the macro as well?
 impl From<TokenizerError> for ParseError {
     fn from(err: TokenizerError) -> Self {
         Self::new_with_cause("Tokenizer Error", Box::new(err))
