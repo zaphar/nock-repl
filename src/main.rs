@@ -7,6 +7,7 @@ mod macros;
 mod tokenizer;
 mod parser;
 mod errors;
+mod nock;
 
 use clap::{App, Arg};
 use rustyline::Editor;
@@ -94,7 +95,7 @@ fn main() {
             PromptingLineParser::new("nock> ".to_string(), ">     ".to_string(), is_complete_expr);
         let mut nock_parser = parser::Parser::new(Box::new(reader));
         while let Ok(expr) = nock_parser.parse() {
-            println!("Echo: {}", expr)
+            println!("Echo: {:?}", nock::eval(expr))
         }
     }
 }

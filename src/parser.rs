@@ -1,32 +1,91 @@
 //! The parser module implements a nock syntax parser.
+#![macro_use]
 
 use std::error;
 use std::str::FromStr;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-use macros;
 use tokenizer::{Tokenizer, Token, TokenizerError, ExpressionReader};
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Clone)]
 pub enum Noun {
     Atom(u64),
-    Cell(Box<Noun>, Vec<Noun>),
+    Cell(Vec<Noun>),
+}
+
+pub fn atom(a: u64) -> Noun {
+    Noun::Atom(a)
 }
 
 impl Display for Noun {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
             &Noun::Atom(ref u) => try!(write!(fmt, "{}", u)),
-            &Noun::Cell(ref head, ref tail) => {
-                try!(write!(fmt, "[{}", head));
-                for n in tail {
-                    try!(write!(fmt, " {}", n));
+            &Noun::Cell(ref list) => {
+                let len = list.len();
+                if len > 0 {
+                    try!(write!(fmt, "[{}", list[0]));
+                }
+                if len > 1 {
+                    for n in &list[1..] {
+                        try!(write!(fmt, " {}", n));
+                    }
                 }
                 try!(write!(fmt, "]"))
             }
         }
         return Ok(());
+    }
+}
+
+#[macro_export]
+macro_rules! cell {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x);
+            )*
+            Noun::Cell(Noun::flatten(temp_vec))
+        }
+    };
+}
+
+impl Noun {
+    pub fn flatten(mut nouns: Vec<Noun>) -> Vec<Noun> {
+        if nouns.len() >= 1 {
+            let noun = nouns.pop();
+            if let Some(Noun::Cell(mut list)) = noun {
+                let head = list.pop().unwrap();
+                if list.len() > 0 {
+                    let mut new_list = Self::flatten(list);
+                    nouns.append(&mut new_list);
+                }
+                nouns.push(head);
+            } else if let Some(noun) = noun {
+                nouns.push(noun);
+            }
+        }
+        return nouns;
+    }
+
+    pub fn head(&self) -> Result<&Noun, ParseError> {
+        if let &Noun::Cell(ref list) = self {
+            if list.len() > 0 {
+                return Ok(&list[0]);
+            }
+        }
+        Err(ParseError::new("!! Atoms or ~ have no head"))
+    }
+
+    pub fn tail(&self) -> Result<&[Noun], ParseError> {
+        if let &Noun::Cell(ref list) = self {
+            if list.len() > 1 {
+                return Ok(&list[1..]);
+            }
+        }
+        Err(ParseError::new("!! Atoms or cells of (len < 2) have no tail"))
     }
 }
 
@@ -56,35 +115,21 @@ impl Parser {
         };
     }
 
-    fn flatten(&self, mut nouns: Vec<Noun>) -> Vec<Noun> {
-        if nouns.len() == 1 {
-            let noun = nouns.pop();
-            if let Some(Noun::Cell(head, tail)) = noun {
-                nouns.push(*head);
-                let mut new_tail = self.flatten(tail);
-                nouns.append(&mut new_tail);
-            } else if let Some(noun) = noun {
-                nouns.push(noun);
-            }
-        }
-        return nouns;
-    }
-
     fn parse_cell(&mut self) -> Result<Noun, ParseError> {
-        let head = try!(self.parse());
-        let mut tail = Vec::<Noun>::new();
+        let mut list = Vec::<Noun>::new();
+        list.push(try!(self.parse()));
         loop {
             let tok = try!(self.toker.next());
             if tok.is_atom() {
-                tail.push(try!(self.parse_atom(&tok)))
+                list.push(try!(self.parse_atom(&tok)))
             } else if tok.is_cell_start() {
-                tail.push(try!(self.parse_cell()))
+                list.push(try!(self.parse_cell()))
             } else if tok.is_cell_end() {
-                tail = self.flatten(tail);
+                list = Noun::flatten(list);
                 break;
             }
         }
-        Ok(Noun::Cell(Box::new(head), tail))
+        Ok(Noun::Cell(list))
     }
 
     pub fn parse(&mut self) -> Result<Noun, ParseError> {
@@ -124,8 +169,7 @@ mod parser_tests {
         let noun = parser.parse();
         assert!(noun.is_ok());
         let noun = noun.unwrap();
-        assert_eq!(noun,
-                   Noun::Cell(Box::new(Noun::Atom(1)), vec![Noun::Atom(2)]));
+        assert_eq!(noun, Noun::Cell(vec![Noun::Atom(1), Noun::Atom(2)]));
     }
 
     #[test]
@@ -138,7 +182,7 @@ mod parser_tests {
         assert!(noun.is_ok());
         let noun = noun.unwrap();
         assert_eq!(noun,
-                   Noun::Cell(Box::new(Noun::Atom(1)), vec![Noun::Atom(2), Noun::Atom(3)]));
+                   Noun::Cell(vec![Noun::Atom(1), Noun::Atom(2), Noun::Atom(3)]));
     }
 
     #[test]
@@ -151,7 +195,7 @@ mod parser_tests {
         assert!(noun.is_ok());
         let noun = noun.unwrap();
         assert_eq!(noun,
-                   Noun::Cell(Box::new(Noun::Atom(1)), vec![Noun::Atom(2), Noun::Atom(3)]));
+                   Noun::Cell(vec![Noun::Atom(1), Noun::Atom(2), Noun::Atom(3)]));
     }
 
     #[test]
@@ -164,8 +208,8 @@ mod parser_tests {
         assert!(noun.is_ok());
         let noun = noun.unwrap();
         assert_eq!(noun,
-                   Noun::Cell(Box::new(Noun::Atom(1)),
-                              vec![Noun::Cell(Box::new(Noun::Atom(2)), vec![Noun::Atom(3)]),
+                   Noun::Cell(vec![Noun::Atom(1),
+                                   Noun::Cell(vec![Noun::Atom(2), Noun::Atom(3)]),
                                    Noun::Atom(4)]));
     }
 }
