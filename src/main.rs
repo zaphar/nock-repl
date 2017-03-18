@@ -48,6 +48,7 @@ impl tokenizer::ExpressionReader for PromptingLineParser {
                 prompt = &self.continue_prompt;
             }
         }
+        self.editor.add_history_entry(&buffer.join("\n"));
         return Ok(buffer);
     }
 }
@@ -95,7 +96,10 @@ fn main() {
             PromptingLineParser::new("nock> ".to_string(), ">     ".to_string(), is_complete_expr);
         let mut nock_parser = parser::Parser::new(Box::new(reader));
         while let Ok(expr) = nock_parser.parse() {
-            println!("Echo: {:?}", nock::eval(expr))
+            match nock::eval(expr) {
+                Ok(noun) => println!("{}", noun),
+                Err(err) => println!("{}", err),
+            }
         }
     }
 }
