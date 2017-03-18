@@ -87,6 +87,20 @@ impl Noun {
         }
         Err(ParseError::new("!! Atoms or cells of (len < 2) have no tail"))
     }
+
+    pub fn is_atom(&self) -> bool {
+        if let &Noun::Atom(_) = self {
+            return true;
+        }
+        return false;
+    }
+
+    pub fn is_cell(&self) -> bool {
+        if let &Noun::Cell(_) = self {
+            return true;
+        }
+        return false;
+    }
 }
 
 make_error!(ParseError, "ParseError: {}\n");

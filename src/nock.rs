@@ -182,6 +182,8 @@ pub fn eval(noun: Noun) -> Result<Noun, NockError> {
 
 // Evaluates a nock formula against a subj.
 fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
+    println!("subject {}", subj);
+    println!("formula {}", formula);
     match formula {
         Noun::Atom(_) => return Err(NockError::new(format!("!! Nock Infinite Loop"))),
         cell => {
@@ -190,7 +192,12 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                     // We expect an instruction from 0 to 10
                     match a {
                         0 => {
-                            return Ok(try!(fas(subj, a)));
+                            let tail = try!(slice_to_noun(try!(cell.tail())));
+                            if let Noun::Atom(b) = tail {
+                                return fas(subj, b);
+                            } else {
+                                return Err(NockError::new(format!("!! not a slot index {}", tail)));
+                            }
                         }
                         1 => {
                             return Ok(try!(slice_to_noun(try!(cell.tail()))));
