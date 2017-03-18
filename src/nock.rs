@@ -182,8 +182,8 @@ pub fn eval(noun: Noun) -> Result<Noun, NockError> {
 
 // Evaluates a nock formula against a subj.
 fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
-    println!("subject {}", subj);
-    println!("formula {}", formula);
+    //println!("subject {}", subj);
+    //println!("formula {}", formula);
     match formula {
         Noun::Atom(_) => return Err(NockError::new(format!("!! Nock Infinite Loop"))),
         cell => {
@@ -212,7 +212,11 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                                                     try!(cell.tail())))))));
                         }
                         4 => {
-                            return Ok(try!(lus(try!(slice_to_noun(try!(cell.tail()))))));
+                            let tail_noun = try!(slice_to_noun(try!(cell.tail())));
+                            if let Noun::Cell(_) = tail_noun {
+                                return Ok(try!(lus(try!(nock_internal(subj, tail_noun)))));
+                            }
+                            return Ok(try!(lus(tail_noun)));
                         }
                         5 => {
                             return Ok(try!(tis(try!(slice_to_noun(try!(cell.tail()))))));
@@ -316,8 +320,12 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                         }
                     }
                 }
-                ref cell => {
-                    let head = try!(nock_internal(subj, try!(cell.head()).clone()));
+                head_formula => {
+                    // println!("Computing Distribution");
+                    // println!("head: {:?}", head_formula);
+                    // println!("tail: {:?}", cell.tail());
+                    // FIXME(jwall): We need to handle distribution properly.
+                    let head = try!(nock_internal(subj, head_formula.clone()));
                     let new_formula = try!(slice_to_noun(try!(cell.tail())));
                     let tail_noun = try!(nock_internal(subj, new_formula));
                     return Ok(cell!(head, tail_noun));
