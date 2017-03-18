@@ -2,12 +2,11 @@
 
 use std::error;
 use std::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use std::convert::Into;
 use std::convert::From;
 use std::char;
 
-use macros;
 use errors::WrappedError;
 
 #[derive(Debug)]

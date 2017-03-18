@@ -5,6 +5,7 @@ use std::convert::From;
 
 use rustyline::error::ReadlineError;
 
+// TODO(jwall): Maybe this should be done with the macro?
 #[derive(Debug)]
 pub struct WrappedError {
     msg: String,

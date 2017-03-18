@@ -1,8 +1,4 @@
 //! macros implements several useful macros.
-#![macro_use]
-use std::error;
-use std::fmt;
-use std::fmt::Display;
 
 #[macro_export]
 macro_rules! make_error {
