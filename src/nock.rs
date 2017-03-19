@@ -182,8 +182,8 @@ pub fn eval(noun: Noun) -> Result<Noun, NockError> {
 
 // Evaluates a nock formula against a subj.
 fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
-    //println!("subject {}", subj);
-    //println!("formula {}", formula);
+    // println!("subject {}", subj);
+    // println!("formula {}", formula);
     match formula {
         Noun::Atom(_) => return Err(NockError::new(format!("!! Nock Infinite Loop"))),
         cell => {

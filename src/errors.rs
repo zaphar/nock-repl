@@ -14,6 +14,7 @@ pub struct WrappedError {
 
 
 impl WrappedError {
+    #[cfg(test)] // Only used in tests for now.
     pub fn new<S: Into<String>>(msg: S) -> Self {
         WrappedError {
             msg: msg.into(),
