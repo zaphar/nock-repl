@@ -1,3 +1,18 @@
+//! errors implements common error types.
+// Copyright (2017) Jeremy A. Wall.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+use std::io;
 use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -14,7 +29,6 @@ pub struct WrappedError {
 
 
 impl WrappedError {
-    #[cfg(test)] // Only used in tests for now.
     pub fn new<S: Into<String>>(msg: S) -> Self {
         WrappedError {
             msg: msg.into(),
@@ -56,5 +70,11 @@ impl Error for WrappedError {
 impl From<ReadlineError> for WrappedError {
     fn from(err: ReadlineError) -> Self {
         Self::with_cause("Readline Error!", Box::new(err))
+    }
+}
+
+impl From<io::Error> for WrappedError {
+    fn from(err: io::Error) -> Self {
+        Self::with_cause("IO Error!", Box::new(err))
     }
 }

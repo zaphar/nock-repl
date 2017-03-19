@@ -1,3 +1,17 @@
+//! main is our command line application implementation.
+// Copyright (2017) Jeremy A. Wall.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 extern crate clap;
 extern crate rustyline;
 
@@ -53,6 +67,55 @@ impl tokenizer::ExpressionReader for PromptingLineParser {
     }
 }
 
+use std::fs::File;
+use std::io::BufReader;
+use std::io::BufRead;
+
+struct FileExpressionReader {
+    name: String,
+    buff_reader: Option<BufReader<File>>,
+    is_complete: fn(&Vec<String>) -> bool,
+    eof: bool,
+}
+
+impl FileExpressionReader {
+    pub fn new<S: Into<String>>(file_name: S, is_complete: fn(&Vec<String>) -> bool) -> FileExpressionReader {
+        FileExpressionReader{name: file_name.into(),
+                             buff_reader: None,
+                             is_complete: is_complete,
+                             eof: false,
+        }
+    }
+
+    pub fn open(&mut self) -> Result<(), WrappedError> {
+        let file = try!(File::open(&self.name));
+        self.buff_reader = Some(BufReader::new(file));
+        Ok(())
+    }
+}
+
+impl tokenizer::ExpressionReader for FileExpressionReader {
+    fn read(&mut self) -> Result<Vec<String>, WrappedError> {
+        if self.eof {
+            return Err(WrappedError::new("End of File"));
+        }
+        let mut buffer = Vec::new();
+        loop {
+            let mut line = String::new();
+            let mut rdr = self.buff_reader.as_mut().expect("");
+            let num_read = try!(rdr.read_line(&mut line));
+            buffer.push(line);
+            if num_read < 1 {
+                self.eof = true;
+            }
+            if (self.is_complete)(&buffer) {
+                break;
+            }
+        }
+        return Ok(buffer);
+    }
+}
+
 fn do_flags<'a>() -> clap::ArgMatches<'a> {
     return App::new("nock")
         .version("0.1")
@@ -84,9 +147,21 @@ fn is_complete_expr(lines: &Vec<String>) -> bool {
 
 fn main() {
     let matches = do_flags();
+    fn eval_exprs(mut nock_parser: parser::Parser) {
+        while let Ok(expr) = nock_parser.parse() {
+            match nock::eval(expr) {
+                Ok(noun) => println!("{}", noun),
+                Err(err) => println!("{}", err),
+            }
+        }
+    }
+
     if let Some(filename) = matches.value_of("file") {
         // parse and execute file stream.
-        println!("Executing: {}", filename);
+        let mut reader = FileExpressionReader::new(filename, is_complete_expr);
+        reader.open().expect("Failed to open file!");
+        let nock_parser = parser::Parser::new(Box::new(reader));
+        eval_exprs(nock_parser);
     } else {
         // parse and execute stdin.
         println!("Welcome to the nock repl!");
@@ -94,12 +169,7 @@ fn main() {
         println!("Ctrl-D to quit...\n");
         let reader =
             PromptingLineParser::new("nock> ".to_string(), ">     ".to_string(), is_complete_expr);
-        let mut nock_parser = parser::Parser::new(Box::new(reader));
-        while let Ok(expr) = nock_parser.parse() {
-            match nock::eval(expr) {
-                Ok(noun) => println!("{}", noun),
-                Err(err) => println!("{}", err),
-            }
-        }
+        let nock_parser = parser::Parser::new(Box::new(reader));
+        eval_exprs(nock_parser);
     }
 }

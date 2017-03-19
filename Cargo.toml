@@ -1,7 +1,12 @@
 [package]
 name = "nock"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Jeremy Wall <jeremy@marzhillstudios.com>"]
+description = "Executes nock expressions from a file or on a repl."
+repository = "https://github.com/zaphar/nock-repl"
+readme = "README.md"
+keywords = ["repl", "command-line", "interpreter"]
+license = "Apache-2.0"
 
 [dependencies]
 clap = "~2.19.0"
