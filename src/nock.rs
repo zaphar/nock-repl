@@ -196,8 +196,6 @@ pub fn eval(noun: Noun) -> Result<Noun, NockError> {
 
 // Evaluates a nock formula against a subj.
 fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
-    // println!("subject {}", subj);
-    // println!("formula {}", formula);
     match formula {
         Noun::Atom(_) => return Err(NockError::new(format!("!! Nock Infinite Loop"))),
         cell => {
@@ -335,10 +333,6 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                     }
                 }
                 head_formula => {
-                    // println!("Computing Distribution");
-                    // println!("head: {:?}", head_formula);
-                    // println!("tail: {:?}", cell.tail());
-                    // FIXME(jwall): We need to handle distribution properly.
                     let head = try!(nock_internal(subj, head_formula.clone()));
                     let new_formula = try!(slice_to_noun(try!(cell.tail())));
                     let tail_noun = try!(nock_internal(subj, new_formula));
