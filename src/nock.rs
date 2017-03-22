@@ -138,6 +138,19 @@ fn lus(noun: Noun) -> Result<Noun, NockError> {
     }
 }
 
+#[cfg(test)]
+#[test]
+fn test_lus() {
+    assert_eq!(lus(atom(1)).expect("Should be able to increment an atom"), atom(2));
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn test_lus_crash() {
+    lus(cell!(atom(1), atom(2))).unwrap();
+}
+
 fn cmp_noun(a: &Noun, b: &[Noun]) -> Noun {
     let falsy = atom(0);
     let truthy = atom(1);
