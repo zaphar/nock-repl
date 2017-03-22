@@ -122,7 +122,7 @@ fn test_fas_crash() {
     fas(&cell, 12).unwrap();
 }
 
-// Returns 1 false for an atom and 0 true for a Noun::Cell.
+// Returns 1 false for an Noun::Atom and 0 true for a Noun::Cell.
 fn wut(noun: Noun) -> Noun {
     match noun {
         Noun::Atom(_) => atom(1),
@@ -130,7 +130,7 @@ fn wut(noun: Noun) -> Noun {
     }
 }
 
-// lus increments a atom but crashes for a Noun::Cell.
+// lus increments a Noun::Atom but crashes for a Noun::Cell.
 fn lus(noun: Noun) -> Result<Noun, NockError> {
     match noun {
         Noun::Atom(a) => Ok(atom(a + 1)),
@@ -152,22 +152,27 @@ fn test_lus_crash() {
 }
 
 fn cmp_noun(a: &Noun, b: &[Noun]) -> Noun {
-    let falsy = atom(0);
-    let truthy = atom(1);
+    let truthy = atom(0);
+    let falsy = atom(1);
     match a {
         &Noun::Cell(ref list) => {
+            if b.len() == 1 {
+                if let Noun::Cell(ref list) = b[0] {
+                    return cmp_noun(a, &list);
+                }
+            }
             if list.len() != b.len() {
                 return falsy;
             }
             for (i, n) in list.iter().enumerate() {
-                if cmp_noun(n, &b[i..]) == falsy {
+                if cmp_noun(n, &b[i..i+1]) == falsy {
                     return falsy;
                 }
             }
             return truthy;
         }
         &Noun::Atom(a) => {
-            if b.len() != 1 {
+            if b.len() == 1 {
                 if let Noun::Atom(b) = b[0] {
                     if a == b {
                         return truthy;
@@ -193,8 +198,45 @@ fn tis(noun: Noun) -> Result<Noun, NockError> {
     }
 }
 
+#[cfg(test)]
+#[test]
+fn test_tis() {
+    //assert_eq!(
+    //    tis(cell!(atom(1), atom(1))).expect("Should be able to compare a Noun::Cell"),
+    //        atom(0));
+    //assert_eq!(
+    //    tis(cell!(atom(0), atom(1))).expect("Should be able to compare a Noun::Cell"),
+    //        atom(1));
+    //assert_eq!(
+    //    tis(cell!(atom(0), cell!(atom(1), atom(2)))).expect("Should be able to compare a Noun::Cell"),
+    //        atom(1));
+    //assert_eq!(
+    //    tis(cell!(cell!(atom(1), atom(2)), cell!(atom(1), atom(2))))
+    //        .expect("Should be able to compare a Noun::Cell"),
+    //        atom(0));
+    assert_eq!(
+        tis(cell!(cell!(atom(1), cell!(atom(2), atom(3)), atom(4)),
+                  cell!(atom(1), cell!(atom(2), atom(3)), atom(4))))
+            .expect("Should be able to compare a Noun::Cell"),
+            atom(0));
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn test_tis_crash_atom() {
+    tis(atom(1)).unwrap();
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn test_tis_crash_cell() {
+    tis(cell!(atom(1))).unwrap();
+}
+
 // evaluates a nock expression of type [subj formula] or [formula] or atom
-pub fn eval(noun: Noun) -> Result<Noun, NockError> {
+pub fn compute(noun: Noun) -> Result<Noun, NockError> {
     match &noun {
         &Noun::Atom(_) => nock_internal(&Noun::Atom(0), noun.clone()),
         &Noun::Cell(ref list) => {

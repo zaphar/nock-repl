@@ -149,7 +149,7 @@ fn main() {
     let matches = do_flags();
     fn eval_exprs(mut nock_parser: parser::Parser) {
         while let Ok(expr) = nock_parser.parse() {
-            match nock::eval(expr) {
+            match nock::compute(expr) {
                 Ok(noun) => println!("{}", noun),
                 Err(err) => println!("{}", err),
             }

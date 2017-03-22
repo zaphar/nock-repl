@@ -53,8 +53,7 @@ impl Display for Noun {
 }
 
 #[macro_export]
-macro_rules! cell {
-    ( $( $x:expr ),* ) => {
+macro_rules! cell {    ( $( $x:expr ),* ) => {
         {
             let mut temp_vec = Vec::new();
             $(
@@ -66,14 +65,14 @@ macro_rules! cell {
 }
 
 impl Noun {
+    // FIXME(jwall): flatten isn't working.
     pub fn flatten(mut nouns: Vec<Noun>) -> Vec<Noun> {
         if nouns.len() >= 1 {
             let noun = nouns.pop();
             if let Some(Noun::Cell(mut list)) = noun {
                 let head = list.pop().unwrap();
                 if list.len() > 0 {
-                    let mut new_list = Self::flatten(list);
-                    nouns.append(&mut new_list);
+                    nouns.append(&mut list);
                 }
                 nouns.push(head);
             } else if let Some(noun) = noun {
@@ -158,7 +157,7 @@ impl Parser {
 
 #[cfg(test)]
 mod parser_tests {
-    use parser::{Parser, Noun};
+    use parser::{Parser, Noun, atom};
     use tokenizer::tokenizer_tests::MockReader;
 
     #[test]
@@ -224,5 +223,26 @@ mod parser_tests {
                    Noun::Cell(vec![Noun::Atom(1),
                                    Noun::Cell(vec![Noun::Atom(2), Noun::Atom(3)]),
                                    Noun::Atom(4)]));
+    }
+
+    #[test]
+    fn test_flatten() {
+        let reader = MockReader::new(vec![
+            "[[1 2] [1 2]]".to_string(),
+            "[[1 [2 3] 4] [1 [2 3] 4]]".to_string(),
+        ]);
+        let mut parser = Parser::new(Box::new(reader));
+        let noun = parser.parse();
+        assert!(noun.is_ok());
+        let noun = noun.unwrap();
+        assert_eq!(noun,
+                  Noun::Cell(vec![Noun::Cell(vec![atom(1), atom(2)]),
+                                  atom(1), atom(2)]));
+        let noun = parser.parse();
+        assert!(noun.is_ok());
+        let noun = noun.unwrap();
+        assert_eq!(noun,
+                  Noun::Cell(vec![Noun::Cell(vec![atom(1), Noun::Cell(vec![atom(2), atom(3)]), atom(4)]),
+                                  atom(1), Noun::Cell(vec![atom(2), atom(3)]), atom(4)]));
     }
 }
