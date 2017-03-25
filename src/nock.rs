@@ -16,7 +16,7 @@ use parser::{Noun, ParseError, atom};
 use std::error;
 use std::fmt;
 use std::fmt::Display;
-
+use std::collections::VecDeque;
 
 make_error!(NockError, "NockError: {}\n");
 
@@ -47,17 +47,18 @@ fn make_tree_path(addr: u64) -> Vec<bool> {
     // 6 is the head of 3
     // 3 is the tail of 1
     // 1 is the whole tree.
-    let mut ret = Vec::new();
+    let mut ret = VecDeque::new();
     let mut next = addr;
     loop {
-        ret.push(next % 2 == 0);
+        ret.push_front(next % 2 == 0);
         next = next / 2;
         if next <= 1 {
             break;
         }
     }
-    // TODO(jwall): if we could not have to reverse that would be nice.
-    ret.iter().rev().cloned().collect()
+    let range = 0..ret.len();
+    let path = ret.drain(range).collect();
+    return path;
 }
 
 fn fas(subj: &Noun, addr: u64) -> Result<Noun, NockError> {
