@@ -20,7 +20,8 @@ use std::convert::From;
 
 use rustyline::error::ReadlineError;
 
-// TODO(jwall): Maybe this should be done with the macro?
+/// A WrappedError is a general error returned from an ExpressionReader that
+/// wraps any std::error::Error returned by the underlying bytestream provider.
 #[derive(Debug)]
 pub struct WrappedError {
     msg: String,
@@ -29,6 +30,7 @@ pub struct WrappedError {
 
 
 impl WrappedError {
+    /// Construct a new WrappedError with a message and no cause.
     pub fn new<S: Into<String>>(msg: S) -> Self {
         WrappedError {
             msg: msg.into(),
@@ -36,6 +38,7 @@ impl WrappedError {
         }
     }
 
+    /// Construct a new WrappedError with a message and a cause.
     pub fn with_cause<S: Into<String>>(msg: S, err: Box<Error>) -> Self {
         WrappedError {
             msg: msg.into(),

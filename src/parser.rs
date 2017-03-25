@@ -21,12 +21,14 @@ use std::fmt::{Display, Formatter};
 
 use tokenizer::{Tokenizer, Token, TokenizerError, ExpressionReader};
 
+/// A Noun is an Atom or a Cell.
 #[derive(Debug,PartialEq,Clone)]
 pub enum Noun {
     Atom(u64),
     Cell(Vec<Noun>),
 }
 
+/// atom constructs a Noun::Atom.
 pub fn atom(a: u64) -> Noun {
     Noun::Atom(a)
 }
@@ -52,6 +54,7 @@ impl Display for Noun {
     }
 }
 
+/// cell! constructs a Noun::Cell.
 #[macro_export]
 macro_rules! cell {    ( $( $x:expr ),* ) => {
         {
@@ -65,7 +68,9 @@ macro_rules! cell {    ( $( $x:expr ),* ) => {
 }
 
 impl Noun {
-    // FIXME(jwall): flatten isn't working.
+    /// flatten flattens a Vec<Nouns> to implement autocons.
+    /// [0 [1 [2 3]]] become [0 1 2 3].
+    /// but [0 [1 2] 3] stays the same.
     pub fn flatten(mut nouns: Vec<Noun>) -> Vec<Noun> {
         if nouns.len() >= 1 {
             let noun = nouns.pop();
@@ -82,6 +87,7 @@ impl Noun {
         return nouns;
     }
 
+    /// head returns the head of a Noun::Cell or crashes if it's not a Cell.
     pub fn head(&self) -> Result<&Noun, ParseError> {
         if let &Noun::Cell(ref list) = self {
             if list.len() > 0 {
@@ -91,6 +97,7 @@ impl Noun {
         Err(ParseError::new("!! Atoms or ~ have no head"))
     }
 
+    /// tail returns the tail of a Noun::Cell or crashes if it's not a cell.
     pub fn tail(&self) -> Result<&[Noun], ParseError> {
         if let &Noun::Cell(ref list) = self {
             if list.len() > 1 {
@@ -110,11 +117,13 @@ impl From<TokenizerError> for ParseError {
     }
 }
 
+/// Parser parses a Token stream from a Tokenizer into a nock Noun.
 pub struct Parser {
     toker: Tokenizer,
 }
 
 impl Parser {
+    /// Construct a parser from an ExpressionReader.
     pub fn new(reader: Box<ExpressionReader>) -> Self {
         Parser { toker: Tokenizer::new(reader) }
     }
@@ -144,6 +153,7 @@ impl Parser {
         Ok(Noun::Cell(list))
     }
 
+    /// Parses a single Noun from the ExpressionReader or returns an error.
     pub fn parse(&mut self) -> Result<Noun, ParseError> {
         let tok = try!(self.toker.next());
         if tok.is_atom() {

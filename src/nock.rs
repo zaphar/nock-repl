@@ -36,17 +36,31 @@ fn slice_to_noun(nouns: &[Noun]) -> Result<Noun, NockError> {
     }
 }
 
-// true means take the head.
-// false means take the tail
+/// # Algorithm
+/// Nock calculates tree addresses using an algorithm like so:
+/// * 1 is the root of the tree.
+/// * the right child or head of a node is 2n.
+/// * the left child or tail is 2n+1.
+///
+/// We construct a path through a nock cell given an address by
+/// following the following rules. The parent of a node address
+/// is always that address divided by 2. For each parent address we
+/// we calculate we check for whether it is odd or not. If the
+/// address is even then we know that that address was a head
+/// node and store true in that path. If the address was odd
+/// then we know that that node was a tail and we output false.
+///
+/// This way when we follow a path we know which part of the tree
+/// we should recurse down.
+///
+/// # Examples:
+///
+/// ### Given an address of 6
+/// 6 is the head of 3
+/// 3 is the tail of 1
+///
+/// Which yields a path of [false, true]
 fn make_tree_path(addr: u64) -> Vec<bool> {
-    // 6 is the head of 3
-    // 3 is the tail of 1
-    // 1 is the whole tree.
-
-    // 13 is the tail of 6
-    // 6 is the head of 3
-    // 3 is the tail of 1
-    // 1 is the whole tree.
     let mut ret = VecDeque::new();
     let mut next = addr;
     loop {
@@ -202,19 +216,19 @@ fn tis(noun: Noun) -> Result<Noun, NockError> {
 #[cfg(test)]
 #[test]
 fn test_tis() {
-    //assert_eq!(
-    //    tis(cell!(atom(1), atom(1))).expect("Should be able to compare a Noun::Cell"),
-    //        atom(0));
-    //assert_eq!(
-    //    tis(cell!(atom(0), atom(1))).expect("Should be able to compare a Noun::Cell"),
-    //        atom(1));
-    //assert_eq!(
-    //    tis(cell!(atom(0), cell!(atom(1), atom(2)))).expect("Should be able to compare a Noun::Cell"),
-    //        atom(1));
-    //assert_eq!(
-    //    tis(cell!(cell!(atom(1), atom(2)), cell!(atom(1), atom(2))))
-    //        .expect("Should be able to compare a Noun::Cell"),
-    //        atom(0));
+    assert_eq!(
+        tis(cell!(atom(1), atom(1))).expect("Should be able to compare a Noun::Cell"),
+            atom(0));
+    assert_eq!(
+        tis(cell!(atom(0), atom(1))).expect("Should be able to compare a Noun::Cell"),
+            atom(1));
+    assert_eq!(
+        tis(cell!(atom(0), cell!(atom(1), atom(2)))).expect("Should be able to compare a Noun::Cell"),
+            atom(1));
+    assert_eq!(
+        tis(cell!(cell!(atom(1), atom(2)), cell!(atom(1), atom(2))))
+            .expect("Should be able to compare a Noun::Cell"),
+            atom(0));
     assert_eq!(
         tis(cell!(cell!(atom(1), cell!(atom(2), atom(3)), atom(4)),
                   cell!(atom(1), cell!(atom(2), atom(3)), atom(4))))
@@ -236,7 +250,7 @@ fn test_tis_crash_cell() {
     tis(cell!(atom(1))).unwrap();
 }
 
-// evaluates a nock expression of type [subj formula] or [formula] or atom
+/// compute computes a nock expression of type [subj formula] or atom
 pub fn compute(noun: Noun) -> Result<Noun, NockError> {
     match &noun {
         &Noun::Atom(_) => nock_internal(&Noun::Atom(0), noun.clone()),
@@ -250,7 +264,27 @@ pub fn compute(noun: Noun) -> Result<Noun, NockError> {
     }
 }
 
-// Evaluates a nock formula against a subj.
+/// Evaluates a nock formula against a subj.
+///
+/// The head of the formula is expected to be a Noun::Atom or a Noun::Cell that
+/// computes to a Noun::Atom with one of the following values.
+///
+/// * 0 fas or slot the nock tree addressing algorithm. expects an atom crashes
+///   if it isn't.
+/// * 1 return the tail unmodified a sort of nock identity function.
+/// * 2 compute the nock evaluation of the tail against the subject.
+/// * 3 wut or nock operation ? which returns the atom 1 if the tail is an atom
+///   or the atom 0 if it's a cell.
+/// * 4 lus increment the atom in the tail. crash if it's not an atom.
+/// * 5 tis return 0 if the head and the tail of a cell are equal. 1 otherwise.
+/// * 6 the nock macro for if then else.
+/// * 7 \*[a 7 b c] -> *[a 2 b 1 c]
+/// * 8 \*[a 8 b c] -> *[a 7 [[7 [0 1] b] 0 1] c]
+/// * 9 \*[a 9 b c] -> *[a 7 c 2 [0 1] 0 b]
+/// * 10
+///   * \*[a 10 b c]     -> *[a c]
+///   * \*[a 10 [b c] d] -> *[a 8 c 7 [0 3] d]
+/// * Anything else is a nock crash.
 fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
     match formula {
         Noun::Atom(_) => return Err(NockError::new(format!("!! Nock Infinite Loop"))),
@@ -323,7 +357,7 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                         7 => {
                             let tail = try!(cell.tail());
                             if tail.len() < 2 {
-                                return Err(NockError::new("!! Need 3 Nouns for macro 6"));
+                                return Err(NockError::new("!! Need 2 Nouns for macro 7"));
                             }
                             let b = tail[0].clone();
                             let c = tail[1].clone();
@@ -334,7 +368,7 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                         8 => {
                             let tail = try!(cell.tail());
                             if tail.len() < 2 {
-                                return Err(NockError::new("!! Need 3 Nouns for macro 6"));
+                                return Err(NockError::new("!! Need 2 Nouns for macro 8"));
                             }
                             let b = tail[0].clone();
                             let c = tail[1].clone();
@@ -349,7 +383,7 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                         9 => {
                             let tail = try!(cell.tail());
                             if tail.len() < 2 {
-                                return Err(NockError::new("!! Need 3 Nouns for macro 6"));
+                                return Err(NockError::new("!! Need 2 Nouns for macro 9"));
                             }
                             let b = tail[0].clone();
                             let c = tail[1].clone();
@@ -361,7 +395,7 @@ fn nock_internal(subj: &Noun, formula: Noun) -> Result<Noun, NockError> {
                         10 => {
                             let tail = try!(cell.tail());
                             if tail.len() < 2 {
-                                return Err(NockError::new("!! Need 3 Nouns for macro 6"));
+                                return Err(NockError::new("!! Need at least 2 Nouns for macro 6"));
                             }
                             let b = tail[0].clone();
                             let c = tail[1].clone();

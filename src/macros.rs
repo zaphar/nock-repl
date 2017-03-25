@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #[macro_export]
+
+/// make_error! is a helper macro that can constructs an error with a name and
+/// an error message prefix.
 macro_rules! make_error {
     ($e:ident, $msg:expr) => {
 

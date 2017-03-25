@@ -21,6 +21,9 @@ use std::char;
 
 use errors::WrappedError;
 
+/// Token is a parsed token for a Nock Noun.
+/// It includes the line and column that the token was found on.
+/// All valid tokens are in the ASCII character set.
 #[derive(Debug)]
 pub struct Token {
     pub line: usize,
@@ -37,18 +40,22 @@ impl Token {
         }
     }
 
+    /// append_char appends a char to the value.
     pub fn append_char(&mut self, c: char) {
         self.val.push(c);
     }
 
+    /// is_atom returns true if the token is for a valid atom.
     pub fn is_atom(&self) -> bool {
         self.val.len() > 0 && (self.val.as_bytes()[0] as char).is_digit(10)
     }
 
+    /// is_cell_start returns true if the token is a cell start.
     pub fn is_cell_start(&self) -> bool {
         self.val.len() > 0 && self.val == "["
     }
 
+    /// is_cell_end returns true if the token is the end of a cell.
     pub fn is_cell_end(&self) -> bool {
         self.val.len() > 0 && self.val == "]"
     }
@@ -62,12 +69,15 @@ impl From<WrappedError> for TokenizerError {
     }
 }
 
-// TODO(jwall): Tokenizer error.
+/// The ExpressionReader trait represents an interface that will
+/// return either a Vec<String> of lines for a valid nock expression.
+/// or a WrappedError.
 pub trait ExpressionReader {
     fn read(&mut self) -> Result<Vec<String>, WrappedError>;
     // FIXME(jwall): Should this support closing?
 }
 
+/// Tokenizer reads a series of tokens from an expression reader.
 pub struct Tokenizer {
     curr: Option<Vec<String>>,
     line: usize,
@@ -76,6 +86,7 @@ pub struct Tokenizer {
 }
 
 impl Tokenizer {
+    /// new constructs a Tokenizer from an ExpressionReader.
     pub fn new(reader: Box<ExpressionReader>) -> Self {
         Tokenizer {
             curr: None,
@@ -85,6 +96,7 @@ impl Tokenizer {
         }
     }
 
+    /// next returns the next token or a TokenizerError.
     pub fn next(&mut self) -> Result<Token, TokenizerError> {
         try!(self.consume_reader());
         self.get_next_token()
@@ -130,8 +142,8 @@ impl Tokenizer {
     }
 
     fn pushback(&mut self, len: usize) {
-        // This is potentially unsafe but since we are in theory only
-        // ever pushing back something that we have already consumed in
+        // NOTE(jeremy): This is potentially unsafe but since we are in theory
+        // only ever pushing back something that we have already consumed in
         // a single line this should be safe.
         self.col -= len;
     }
@@ -240,9 +252,9 @@ pub mod tokenizer_tests {
             println!("tok: {:?}", tok);
             assert!(tok.is_ok());
             let tok = tok.unwrap();
+            assert_eq!(tok.val, *v);
             assert_eq!(tok.line, l);
             assert_eq!(tok.col, c);
-            assert_eq!(tok.val, *v);
         }
         assert!(toker.next().is_err());
     }
